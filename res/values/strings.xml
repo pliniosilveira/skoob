@@ -3,6 +3,7 @@
 
     <string name="app_name_short">Skoob</string>
     <string name="app_name">Skoob Unofficial</string>
+    <string name="list_activity_name">Pefil</string>
     <string name="action_settings">Settings</string>
     <string name="welcome_text">Bem-vindo ao Skoob!</string>
     <string name="instructions_login">Para utilizar o aplicativo, faça login com a sua conta do Skoob.</string>
@@ -12,6 +13,7 @@
     <string name="logout">Sair</string>
     <string name="password">Senha</string>
     <string name="logging_in">Conectando…</string>
-    <string name="logging_out">Saindo...</string>
+    <string name="logging_out">Saindo…</string>
+    <string name="toast_error_login">Não foi possível conectar ao Skoob. Verifique o nome de usuário e senha.</string>
 
 </resources>

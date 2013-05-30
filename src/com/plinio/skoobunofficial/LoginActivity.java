@@ -26,18 +26,20 @@ import org.apache.http.params.HttpParams;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.TextView;
+import android.widget.Toast;
 
 public class LoginActivity extends Activity {
 
 	static final private String LOG_TAG = "LoginActivity";
 	static final private String LOGIN_URL = "http://www.skoob.com.br/login";
 	static final private String LOGOUT_URL = "http://www.skoob.com.br/login/sair/";
+	static final private String TAG_PERFIL = "<div id=\"meu_perfil\"";
 	private int TIMEOUT_CONNECTION = 5000;
 	private int TIMEOUT_REQUEST = 10000;
 
@@ -58,30 +60,27 @@ public class LoginActivity extends Activity {
 
 		// create HTTP request
 		mHttpClient = new DefaultHttpClient();
-		
+
 		// create progress dialog
 		mProgressDialog = new ProgressDialog(this);
 		mProgressDialog.setCanceledOnTouchOutside(false);
 	}
 
-	/*@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.login, menu);
-		return true;
-	}*/
+	/*
+	 * @Override public boolean onCreateOptionsMenu(Menu menu) { // Inflate the
+	 * menu; this adds items to the action bar if it is present.
+	 * getMenuInflater().inflate(R.menu.login, menu); return true; }
+	 */
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-
 		mStop = false;
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
-
 		mStop = true;
 	}
 
@@ -93,6 +92,13 @@ public class LoginActivity extends Activity {
 				.toString();
 		String password = ((EditText) findViewById(R.id.editTextPassword))
 				.getText().toString();
+
+		if (login.isEmpty()) {
+			login = "plinio89s@gmail.com";
+		}
+		if (password.isEmpty()) {
+			password = "180889";
+		}
 
 		try {
 			login(login, password);
@@ -135,20 +141,25 @@ public class LoginActivity extends Activity {
 		new HttpGuy().execute(httpGet);
 	}
 
+	private void onLogged() {
+		Intent intent = new Intent(this, ShelfListActivity.class);
+		startActivity(intent);
+	}
+
+	private void onLoginError() {
+		Toast.makeText(this, R.string.toast_error_login, Toast.LENGTH_LONG)
+				.show();
+	}
+
 	class HttpGuy extends AsyncTask<HttpUriRequest, Integer, Integer> {
 
 		private String mContent;
 
 		@Override
-		protected void onPreExecute() {
-			super.onPreExecute();
-		}
-
-		@Override
 		protected Integer doInBackground(HttpUriRequest... params) {
-			int error = 0;
+			int error = HttpStatus.SC_OK;
 			if (params.length != 1)
-				return -1;
+				return HttpStatus.SC_BAD_REQUEST;
 
 			HttpUriRequest httpRequest = params[0];
 
@@ -173,19 +184,19 @@ public class LoginActivity extends Activity {
 			} catch (SocketTimeoutException toEx) {
 				Log.e(LOG_TAG, "TIMEOUT");
 				toEx.printStackTrace();
-				error = 1;
+				error = HttpStatus.SC_REQUEST_TIMEOUT;
 			} catch (IOException ioEx) {
 				if (mStop) {
-					error = 0;
+					error = HttpStatus.SC_OK;
 				} else {
 					Log.e(LOG_TAG, "IO ERROR");
 					ioEx.printStackTrace();
-					error = 2;
+					error = HttpStatus.SC_INTERNAL_SERVER_ERROR;
 				}
 			} catch (Exception ex) {
 				Log.e(LOG_TAG, "GENERIC ERROR");
 				ex.printStackTrace();
-				error = 2;
+				error = HttpStatus.SC_INTERNAL_SERVER_ERROR;
 			}
 
 			return error;
@@ -194,17 +205,28 @@ public class LoginActivity extends Activity {
 		@Override
 		protected void onPostExecute(Integer result) {
 			super.onPostExecute(result);
-			Log.d(LOG_TAG, "result = " + result);
+			// Log.d(LOG_TAG, "result = " + result);
 
-			String name = extractName(mContent);
-			Log.i(LOG_TAG, "Name: " + name);
+			mProgressDialog.cancel();
 
-			TextView tv = (TextView) findViewById(R.id.textViewInstructions);
-			if (name.trim().length() != 0) {
-				tv.setText(getString(R.string.loged_as) + " " + name);
-			} else {
-				tv.setText(getString(R.string.instructions_login));
+			if (result == HttpStatus.SC_OK) {
+				if (mContent.contains(TAG_PERFIL)) {
+					onLogged();
+					return;
+				}
 			}
+
+			onLoginError();
+
+			// String name = extractName(mContent);
+			// Log.i(LOG_TAG, "Name: " + name);
+
+			// TextView tv = (TextView) findViewById(R.id.textViewInstructions);
+			// if (name.trim().length() != 0) {
+			// tv.setText(getString(R.string.loged_as) + " " + name);
+			// } else {
+			// tv.setText(getString(R.string.instructions_login));
+			// }
 
 			// Log.i(LOG_TAG, "--- START CONTENT ---");
 			// while (mContent.length() > 50) {
@@ -215,11 +237,6 @@ public class LoginActivity extends Activity {
 			// Log.i(LOG_TAG, "--- END CONTENT ---");
 
 			mProgressDialog.cancel();
-		}
-
-		@Override
-		protected void onProgressUpdate(Integer... values) {
-			super.onProgressUpdate(values);
 		}
 
 		// Função auxiliar para passar o conteúdo de um InputStream para String
@@ -256,10 +273,8 @@ public class LoginActivity extends Activity {
 
 	public String extractName(String mContent) {
 
-		String tagPerfil = "<div id=\"meu_perfil\"";
-
-		if (mContent.contains(tagPerfil)) {
-			int cutIndex = mContent.indexOf(tagPerfil) + tagPerfil.length();
+		if (mContent.contains(TAG_PERFIL)) {
+			int cutIndex = mContent.indexOf(TAG_PERFIL) + TAG_PERFIL.length();
 			mContent = mContent.substring(cutIndex);
 		} else {
 			return "";
